@@ -1,0 +1,6 @@
+tushare
+torch
+pyqlib
+tqdm
+loguru
+fire
