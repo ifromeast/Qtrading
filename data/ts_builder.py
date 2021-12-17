@@ -140,4 +140,5 @@ if __name__ == '__main__':
     ts = TSMgr()
 
     # ts.build_all_etf_quotes()
-    ts.build_all_globe_index_quotes()
+    # ts.build_all_globe_index_quotes()
+    ts.build_all_index_quotes()
