@@ -1,5 +1,4 @@
 tushare
-torch
 pyqlib
 tqdm
 loguru
