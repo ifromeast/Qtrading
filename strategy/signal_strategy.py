@@ -44,10 +44,9 @@ class SelectBySignal(object):
                 to_selected.append(s)
         context['selected'] = to_selected
 
-        selected = context["selected"]
-        n = len(selected)
+        n = len(to_selected)
         if n > 0:
-            context['weights'] = {code:1/n for code in selected}
+            context['weights'] = {code:1/n for code in to_selected}
         else:
             context['weights'] = {}
         return False
@@ -127,7 +126,7 @@ def analysis(start, end, benchmarks=[]):
 if __name__ == '__main__':
     date_start = "20100101"
     date_end = "20211231"
-    df = prepare_data(codes=['000300.SH', '399006.SZ'], start_time="20100101", end_time="20211231")
+    df = prepare_data(codes=['000300.SH', '399006.SZ'], start_time=date_start, end_time=date_end)
 
     algo = SelectBySignal(signal_buy='to_buy', signal_sell='to_sell')
     s = Strategy(algo=algo)
@@ -138,7 +137,7 @@ if __name__ == '__main__':
     path = os.path.dirname(__file__)
     df.to_csv(os.path.dirname(path) + '/results/first_test.csv')
 
-    df_equities, df_ratios, df_corr, df_years = analysis(start='20200101', end='20211231', benchmarks=['000300.SH'])
+    df_equities, df_ratios, df_corr, df_years = analysis(start=date_start, end=date_end, benchmarks=['000300.SH'])
     display(df_ratios)
 
     fig = plt.figure(figsize=(8, 6))
