@@ -1,7 +1,7 @@
 import os
 from data.data_utils import load_data, load_from_file
 import talib as ta
-from model.lgb import LGBModel
+from model.svm import SVMModel
 from base import Strategy
 from account import Account
 import pandas as pd
@@ -43,15 +43,14 @@ def prepare_data(codes=['000300.SH', '399006.SZ'], start_time="20100101", end_ti
 class MLStrategy(object):
     def __init__(self, df, topk=8):
         super(MLStrategy, self).__init__()
-        lgb = LGBModel()
-        lgb.fit(df, train_valid_date='20160101')
-        results = lgb.predict()
+        svm = SVMModel()
+        svm.fit(df, train_valid_date='20160101')
+        results = svm.predict()
         df['pred_score'] = results
         self.K = topk
 
     def __call__(self, context):
         bar = context['bar'].copy()
-        # 先看selected
         if 'selected' in context.keys():
             if len(context['selected']) == 0:
                 return False
@@ -116,7 +115,7 @@ def analysis(start, end, benchmarks=[]):
         df['date'] = df['date'].apply(lambda x: str(x))
         df.index = df['date']
         se = (df['rate'] + 1).cumprod()
-        se.name = 'lgb strategy'
+        se.name = 'svm strategy'
         equities.append(se)
 
     df_equities = pd.concat(equities, axis=1)
@@ -133,7 +132,7 @@ if __name__ == '__main__':
     date_end = "20211231"
     df = prepare_data(codes=['000300.SH', '000905.SH', '399006.SZ', '399324.SZ'], start_time=date_start,end_time=date_end)
 
-    algo = MLStrategy(df, topk=2)
+    algo = MLStrategy(df, topk=5)
     s = Strategy(algo=algo)
 
     b = Backtest(df=df)
