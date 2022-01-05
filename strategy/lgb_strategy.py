@@ -1,7 +1,9 @@
 import os
 from data.data_utils import load_data, load_from_file
 import talib as ta
+from model.gbdt import LGBModel
 from base import Strategy
+from account import Account
 import pandas as pd
 from IPython.display import display
 import matplotlib.pyplot as plt
@@ -12,41 +14,62 @@ def prepare_data(codes=['000300.SH', '399006.SZ'], start_time="20100101", end_ti
     df = load_data(codes, start_time, end_time)
 
     df["rsi"] = ta.RSI(df.close, timeperiod=14)
-    df["to_buy"] = ""
-    df.loc[df["rsi"] <= 30, 'to_buy'] = True
-    df['to_buy'] = df['to_buy'].astype('bool')
 
-    df["to_sell"] = ""
-    df.loc[df["rsi"] >= 70, 'to_sell'] = True
-    df['to_sell'] = df['to_sell'].astype('bool')
+    types = ['SMA', 'EMA', 'WMA', 'DEMA', 'TEMA', 'TRIMA', 'KAMA', 'MAMA', 'T3']
+    for i in range(len(types)):
+        df[types[i] + '5'] = ta.MA(df.close, timeperiod=5, matype=i)
+        df[types[i] + '30'] = ta.MA(df.close, timeperiod=30, matype=i)
+        df[types[i] + '120'] = ta.MA(df.close, timeperiod=120, matype=i)
+
+    df['macd'], df['macdsignal'], df['macdhist'] = ta.MACD(df.close, fastperiod=12, slowperiod=26, signalperiod=9)
+
+    df['obv'] = ta.OBV(df['close'], df['volume'])
+    df['dcperiod'] = ta.HT_DCPERIOD(df.close)
+    df['dcphase'] = ta.HT_DCPHASE(df.close)
+    df['inhpase'], df['quadrature'] = ta.HT_PHASOR(df.close)
+    df['sine'], df['leadsine'] = sine, leadsine = ta.HT_SINE(df.close)
+    df['trendmode'] = ta.HT_TRENDMODE(df.close)
+
+    df['atr'] = ta.ATR(df.high, df.low, df.close, timeperiod=14)
+    df['natr'] = ta.NATR(df.high, df.low, df.close, timeperiod=14)
+    df['trange'] = ta.TRANGE(df.high, df.low, df.close)
+
+    df['label'] = df['close'].shift(5) / df['close'] - 1
+    print(df[['close', 'label']])
     return df
 
+
 # Step 2: prepare strategy
-class SelectBySignal(object):
-    def __init__(self, signal_buy='to_buy', signal_sell='to_sell'):
-        super(SelectBySignal, self).__init__()
-        self.signal_buy = signal_buy
-        self.signal_sell = signal_sell
+class MLStrategy(object):
+    def __init__(self, df, topk=8):
+        super(MLStrategy, self).__init__()
+        lgb = LGBModel()
+        lgb.fit(df, train_valid_date='20160101')
+        results = lgb.predict()
+        df['pred_score'] = results
+        self.K = topk
 
     def __call__(self, context):
         bar = context['bar'].copy()
+        # 先看selected
+        if 'selected' in context.keys():
+            if len(context['selected']) == 0:
+                return False
 
-        acc = context['acc']
-        holding = acc.get_holding_instruments()
+            to_select = []
+            for s in context['selected']:
+                if s in bar.index:
+                    to_select.append(s)
 
-        to_buy = list(bar[bar[self.signal_buy]].index)
-        to_sell = list(bar[bar[self.signal_sell]].index)
+            bar = bar.loc[to_select]
 
-        instruments = to_buy + holding
-        to_selected = []
-        for s in instruments:
-            if s not in to_sell:
-                to_selected.append(s)
-        context['selected'] = to_selected
+        bar.sort_values(by='pred_score', ascending=False, inplace=True)  # 倒序
+        symbols = bar.index[:self.K]
+        context['selected'] = symbols
 
-        n = len(to_selected)
+        n = len(context['selected'])
         if n > 0:
-            context['weights'] = {code:1/n for code in to_selected}
+            context['weights'] = {code:1/n for code in symbols}
         else:
             context['weights'] = {}
         return False
@@ -93,7 +116,7 @@ def analysis(start, end, benchmarks=[]):
         df['date'] = df['date'].apply(lambda x: str(x))
         df.index = df['date']
         se = (df['rate'] + 1).cumprod()
-        se.name = 'strategy'
+        se.name = 'ml strategy'
         equities.append(se)
 
     df_equities = pd.concat(equities, axis=1)
@@ -105,21 +128,19 @@ def analysis(start, end, benchmarks=[]):
     df_ratios, df_corr, df_years = PerformanceUtils().calc_equity(df_equity=df_equities)
     return df_equities, df_ratios, df_corr, df_years
 
-
-
 if __name__ == '__main__':
     date_start = "20100101"
     date_end = "20211231"
-    df = prepare_data(codes=['000300.SH', '399006.SZ'], start_time=date_start, end_time=date_end)
+    df = prepare_data(codes=['000300.SH', '000905.SH', '399006.SZ', '399324.SZ'], start_time=date_start,end_time=date_end)
 
-    algo = SelectBySignal(signal_buy='to_buy', signal_sell='to_sell')
+    algo = MLStrategy(df, topk=2)
     s = Strategy(algo=algo)
 
     b = Backtest(df=df)
     df = b.run(s)
 
     path = os.path.dirname(__file__)
-    df.to_csv(os.path.dirname(path) + '/results/first_test.csv')
+    df.to_csv(os.path.dirname(path) + '/results/second_test.csv')
 
     df_equities, df_ratios, df_corr, df_years = analysis(start=date_start, end=date_end, benchmarks=['000300.SH'])
     display(df_ratios)
@@ -132,12 +153,3 @@ if __name__ == '__main__':
         print(df_years)
         df_years.T.plot(kind='bar', ax=ax2, use_index=True)
     plt.show()
-
-
-
-
-
-
-
-
-
