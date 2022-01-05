@@ -39,7 +39,7 @@ def prepare_data(codes=['000300.SH', '399006.SZ'], start_time="20100101", end_ti
     return df
 
 
-# Step 2: prepare strategy
+# Step 2: train model and prepare strategy
 class MLStrategy(object):
     def __init__(self, df, topk=8):
         super(MLStrategy, self).__init__()
@@ -116,7 +116,7 @@ def analysis(start, end, benchmarks=[]):
         df['date'] = df['date'].apply(lambda x: str(x))
         df.index = df['date']
         se = (df['rate'] + 1).cumprod()
-        se.name = 'ml strategy'
+        se.name = 'lgb strategy'
         equities.append(se)
 
     df_equities = pd.concat(equities, axis=1)

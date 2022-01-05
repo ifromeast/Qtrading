@@ -36,17 +36,13 @@ class LGBModel:
             valid_names=["train", "valid"],
             early_stopping_rounds=50,
             verbose_eval=True,
-            #evals_result=evals_result,
             **kwargs
         )
-        #evals_result["train"] = list(evals_result["train"].values())[0]
-        #evals_result["valid"] = list(evals_result["valid"].values())[0]
         self.df = df
 
     def predict(self):
         if self.model is None:
             raise ValueError("model is not fitted yet!")
         y_pred = pd.Series(self.model.predict(self.df[self.features].values), index=self.df.index)
-        # 模型评估
         print('R2可决系数', r2_score(self.df['label'], y_pred))
         return y_pred
