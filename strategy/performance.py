@@ -59,7 +59,7 @@ class PerformanceUtils(object):
 
         years = []
         for year in range(start_year, end_year + 1):
-            sub_df = df_equity[str(year)]
+            sub_df = df_equity.loc[str(year)]
             if len(sub_df) <= 3:
                 continue
             year_se = round(sub_df.iloc[-1]/sub_df.iloc[0]-1,3)

@@ -35,7 +35,6 @@ def prepare_data(codes=['000300.SH', '399006.SZ'], start_time="20100101", end_ti
     df['trange'] = ta.TRANGE(df.high, df.low, df.close)
 
     df['label'] = df['close'].shift(5) / df['close'] - 1
-    print(df[['close', 'label']])
     return df
 
 
@@ -44,7 +43,7 @@ class MLStrategy(object):
     def __init__(self, df, topk=8):
         super(MLStrategy, self).__init__()
         svm = SVMModel()
-        svm.fit(df, train_valid_date='20160101')
+        svm.fit(df, train_valid_date='20180101')
         results = svm.predict()
         df['pred_score'] = results
         self.K = topk
@@ -109,7 +108,7 @@ def analysis(start, end, benchmarks=[]):
         equities.append(se)
 
     path = os.path.dirname(__file__)
-    filename = os.path.dirname(path)+'/results/first_test.csv'
+    filename = os.path.dirname(path)+'/results/second_test.csv'
     if os.path.exists(filename):
         df = pd.read_csv(filename)
         df['date'] = df['date'].apply(lambda x: str(x))
@@ -132,7 +131,7 @@ if __name__ == '__main__':
     date_end = "20211231"
     df = prepare_data(codes=['000300.SH', '000905.SH', '399006.SZ', '399324.SZ'], start_time=date_start,end_time=date_end)
 
-    algo = MLStrategy(df, topk=5)
+    algo = MLStrategy(df, topk=3)
     s = Strategy(algo=algo)
 
     b = Backtest(df=df)

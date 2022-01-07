@@ -46,8 +46,6 @@ class Account:
         total_mv += self.curr_cash
 
         #再平衡时，可能就是keys相同，不用调整
-
-
         if set(weights.keys()) == set(self.curr_holding.keys()):
 
             b_adjust = True

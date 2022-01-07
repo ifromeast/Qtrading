@@ -24,8 +24,7 @@ class SVMModel:
 
     def fit(self, df, train_valid_date, **kwargs):
         X_train, X_valid, y_train, y_valid = self._prepare_data(df, train_valid_date)
-        self.model = svm.SVR(gamma='scale')
-        self.model.fit(X_train, y_train)
+        self.model = svm.SVR(C=10, gamma=200, kernel='rbf').fit(X_train, y_train)
         self.df = df
 
     def predict(self):
